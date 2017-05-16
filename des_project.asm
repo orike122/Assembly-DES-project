@@ -281,6 +281,24 @@ proc arrange_k_plus
      mov bl,k_plus+6
      mov k_plus_r,bx
      
+     xor ax,ax
+     xor dx,dx
+     
+     mov ax,k_plus_l+0
+     mov dx,k_plus_l+2
+     rcl ax,1
+     jnc enddd
+     rcl dx,1
+     pushf
+     or dx,0000000000000001 
+     popf
+     jnc endd
+     or ax,0000000000010000
+     enddd:
+     mov k_plus_l+0,ax
+     mov k_plus_l+2,dx
+     
+     
         
      popa
      ret
