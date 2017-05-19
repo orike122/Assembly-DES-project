@@ -25,7 +25,8 @@ data segment
     pointer db offset pc_1
     k_plus_l dd 0h
     k_plus_r dd 0h
-         
+    shifts db 01,01,02,02,02,02,02,02,01,02,02,02,02,02,02,01
+    c dd 16 dup(0)      
     
     
     
@@ -283,23 +284,39 @@ proc arrange_k_plus
      
      xor ax,ax
      xor dx,dx
-     
+     xor di,di
+     xor bx,bx
+     xor si,si
+     mov cx,16
+     mov di,2
+     shuv:
+     push cx
+     xor cx,cx
+     mov cx,si
      mov ax,k_plus_l+0
      mov dx,k_plus_l+2
-     rcl ax,1
-     jnc enddd
-     rcl dx,1
+     mov si,offset shifts+cx
+     mov cl,[si]
+     rcl ax,cl
      pushf
-     or dx,0000000000000001 
+     and ax,1111111111101111b
+     rcl dx,cl
+     pushf
+     and dx,1111111111111110b
      popf
-     jnc endd
-     or ax,0000000000010000
-     enddd:
-     mov k_plus_l+0,ax
-     mov k_plus_l+2,dx
-     
-     
-        
+     jnc sof
+     or ax,0000000000010000b
+     popf
+     jnc sof
+     or dx,0000000000000001b
+     sof:
+     mov k_plus_l+bx,ax
+     mov k_plus_l+di,dx
+     inc si
+     add bx,4
+     add di,4
+     pop cx
+     loop shuv   
      popa
      ret
 endp arrange_k_plus   
