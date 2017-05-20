@@ -26,7 +26,8 @@ data segment
     k_plus_l dd 0h
     k_plus_r dd 0h
     shifts db 01,01,02,02,02,02,02,02,01,02,02,02,02,02,02,01
-    c dd 16 dup(0)      
+    c dd 16 dup(0)
+    d dd 16 dup(0)      
     
     
     
@@ -317,7 +318,79 @@ proc arrange_k_plus
      add bx,4
      add di,4
      pop cx
-     loop shuv   
+     loop shuv
+     
+     xor ax,ax
+     xor bx,bx
+     xor si,si
+     xor di,di
+     xor cx,cx
+     xor dx,dx
+
+
+     mov di,2
+     mov ax,k_plus_r+0
+     mov dx,k_plus_r+2
+     mov cl,4
+     shftt:
+     rcl ax,1
+     pushf
+     and ax,1111111111111110b
+     rcl dx,1
+     pushf
+     and dx,1111111111111110b
+     popf
+     jnc contt
+     or ax,0000000000010000b
+     contt:
+     popf
+     jnc soff
+     or dx,0000000000000001b
+     soff:
+     loop shftt
+     mov k_plus_r+0,ax
+     mov k_plus_r+2,dx
+     
+     xor ax,ax
+     xor bx,bx
+     xor si,si
+     xor di,di
+     xor cx,cx
+     xor dx,dx
+     
+     mov cx,16
+     mov di,2
+     mov ax,k_plus_r+0
+     mov dx,k_plus_r+2
+     shuvvv:
+     push cx
+     xor cx,cx
+     mov cl,shifts+si
+     shfttt:
+     rcl ax,1
+     pushf
+     and ax,1111111111111110b
+     rcl dx,1
+     pushf
+     and dx,1111111111111110b
+     popf
+     jnc conttt
+     or ax,0000000000010000b
+     conttt:
+     popf
+     jnc sofff
+     or dx,0000000000000001b
+     sofff:
+     loop shfttt
+     mov d+bx,ax
+     mov d+di,dx
+     inc si
+     add bx,4
+     add di,4
+     pop cx
+     loop shuvvv
+     
+            
      popa
      ret
 endp arrange_k_plus   
