@@ -289,29 +289,30 @@ proc arrange_k_plus
      xor si,si
      mov cx,16
      mov di,2
+     mov ax,k_plus_l+0
+     mov dx,k_plus_l+2
      shuv:
      push cx
      xor cx,cx
-     mov cx,si
-     mov ax,k_plus_l+0
-     mov dx,k_plus_l+2
-     mov si,offset shifts+cx
-     mov cl,[si]
-     rcl ax,cl
+     mov cl,shifts+si
+     shft:
+     rcl ax,1
      pushf
-     and ax,1111111111101111b
-     rcl dx,cl
+     and ax,1111111111111110b
+     rcl dx,1
      pushf
      and dx,1111111111111110b
      popf
-     jnc sof
+     jnc cont
      or ax,0000000000010000b
+     cont:
      popf
      jnc sof
      or dx,0000000000000001b
      sof:
-     mov k_plus_l+bx,ax
-     mov k_plus_l+di,dx
+     loop shft
+     mov c+bx,ax
+     mov c+di,dx
      inc si
      add bx,4
      add di,4
