@@ -26,8 +26,10 @@ data segment
     k_plus_l dd 0h
     k_plus_r dd 0h
     shifts db 01,01,02,02,02,02,02,02,01,02,02,02,02,02,02,01
-    c dd 16 dup(0)
-    d dd 16 dup(0)      
+    c dd 0h,0h,0h,0h,0h,0h,0h,0h,0h,0h,0h,0h,0h,0h,0h,0h
+    d dd 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+    cd db 112 dup(0)
+    temp_dword dd 00000000h    
     
     
     
@@ -39,6 +41,55 @@ stack segment
 ends
 
 code segment
+
+macro shift_left dword,shft_no
+     pusha 
+     xor ax,ax
+     xor bx,bx
+     xor si,si
+     xor di,di
+     xor cx,cx
+     xor dx,dx
+     
+     LOCAL shftt,contt,soff
+
+     mov di,2
+     mov ax,dword+0
+     mov dx,dword+2
+     mov cl,shft_no
+     shftt:
+     rcl ax,1
+     pushf
+     and ax,1111111111111110b
+     rcl dx,1
+     pushf
+     and dx,1111111111111110b
+     popf
+     jnc contt
+     or ax,0000000000010000b
+     contt:
+     popf
+     jnc soff
+     or dx,0000000000000001b
+     soff:
+     loop shftt
+     mov dword+0,ax
+     mov dword+2,dx
+     popa
+endm shift_left
+          
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
 ;the proc rearrange the ekey according to the permution table pc-1, and then puts it in k_plus
 ;use selected_byte to know the specific byte in the ekey, use selected bit to know the specific bit it the byte                                          
 ;may use temp_byte as helper
@@ -393,7 +444,75 @@ proc arrange_k_plus
             
      popa
      ret
-endp arrange_k_plus   
+endp arrange_k_plus
+
+proc join_16_k
+     pusha
+     xor di,di
+     xor si,si
+     xor cx,cx
+     mov di,2
+     mov cx,16
+     
+     repeat:
+     xor bx,bx
+     xor ax,ax
+     xor dx,dx
+     
+     mov temp_byte,0h
+     mov ax,c+di
+     mov cd+si,ah
+     inc si
+     mov cd+si,al
+     inc si
+     sub di,2
+     mov ax,c+di
+     mov cd+si,ah
+     inc si
+     add di,2
+
+     mov temp_byte,al
+     mov dx,d+di
+     and dh,11110000b
+     shr dh,4
+     or temp_byte,dh
+     mov bl,temp_byte
+     mov cd+si,bl
+     mov bx,d+di
+     and bh,00001111b
+     mov d+di,bx
+     sub di,2
+     inc si
+     
+     ;shift left for c
+     mov bx,d+di
+     mov temp_dword,bx
+     mov bx,d+di+2
+     mov temp_dword+2,bx
+     shift_left temp_dword,4
+     ;trans temp_dword to cd
+     mov dx,temp_dword+2
+     mov cd+si,dh
+     inc si
+     mov cd+si,dl
+     inc si
+     mov dx,temp_dword+0
+     mov cd+si,dh
+     inc si
+     add di,6
+     loop repeat
+     
+      
+     
+     
+     
+     
+     
+     
+     
+     popa
+     ret
+endp join_16_k   
      
         
       
@@ -410,6 +529,7 @@ start:
     mov es, ax
     
     call arrange_k_plus
+    call join_16_k
     
     
 
