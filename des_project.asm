@@ -93,15 +93,23 @@ endm shift_left
 ;the proc rearrange the ekey according to the permution table pc-1, and then puts it in k_plus
 ;use selected_byte to know the specific byte in the ekey, use selected bit to know the specific bit it the byte                                          
 ;may use temp_byte as helper
-proc permute_key_pc_1
+macro permute_key pc_table,byte_no,key
      
      pusha
+     LOCAL again,skip_1,skip_2,skip_3,skip_4,skip_5,skip_6,skip_7,bit_1,bit_2,bit_3,bit_4,bit_5,bit_6,bit_7,end_bit_0,end_bit_1,end_bit_2,end_bit_3,end_bit_4,end_bit_5,end_bit_6,end_bit_7,end_builder,endd
      xor ax,ax
      xor bx,bx
      xor cx,cx
      xor dx,dx
      mov temp_byte,00000000b
      mov byte_builder_pointer,0h
+     mov ax,8
+     mov dx,byte_no
+     mul dx
+     add ax,offset pc_table
+     mov pointer,al
+     xor ax,ax
+     xor dx,dx
      ;mov pointer,offset pc_1
 
      mov cx,8
@@ -115,7 +123,7 @@ proc permute_key_pc_1
      div dl
      mov selected_byte,al;**** ;maybe al and ah need to be switched, you need to check it out
      mov selected_bit,ah
-     mov bx,offset ekey
+     mov bx,offset key
      add bl,selected_byte ;bx gets the offset of the selected byte
      mov dl,[bx] ;the selected byte copy to dl
      
@@ -271,45 +279,39 @@ proc permute_key_pc_1
         loop again
         
             popa
-            ret
-endp permute_key_pc_1 
+           
+endm permute_key 
 
 proc arrange_k_plus
      
      pusha
      xor ax,ax
      ;1st byte
-     call permute_key_pc_1
+     permute_key pc_1,0,ekey
      mov al,temp_byte
      mov k_plus,al 
      ;2nd byte
-     mov pointer, offset pc_1+8
-     call permute_key_pc_1
+     permute_key pc_1,1,ekey
      mov al,temp_byte
      mov k_plus+1,al
      ;3rd byte
-     mov pointer, offset pc_1+16
-     call permute_key_pc_1
+     permute_key pc_1,2,ekey
      mov al,temp_byte
      mov k_plus+2,al       
      ;4th byte
-     mov pointer, offset pc_1+24
-     call permute_key_pc_1
+     permute_key pc_1,3,ekey
      mov al,temp_byte
      mov k_plus+3,al
      ;5th byte
-     mov pointer, offset pc_1+32
-     call permute_key_pc_1
+     permute_key pc_1,4,ekey
      mov al,temp_byte
      mov k_plus+4,al     
      ;6th byte
-     mov pointer, offset pc_1+40
-     call permute_key_pc_1
+     permute_key pc_1,5,ekey
      mov al,temp_byte
      mov k_plus+5,al                    
      ;7th byte
-     mov pointer, offset pc_1+48
-     call permute_key_pc_1
+     permute_key pc_1,6,ekey
      mov al,temp_byte
      mov k_plus+6,al                    
      
