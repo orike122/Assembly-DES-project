@@ -17,6 +17,15 @@ data segment
          db 14,06,61,53,45,37,29
          db 21,13,05,28,20,12,04
     
+    pc_2 db 14,17,11,24,01,05
+         db 03,28,15,06,21,10
+         db 23,19,12,04,26,08
+         db 16,07,27,20,13,02
+         db 41,52,31,87,47,55
+         db 30,40,51,45,33,48
+         db 44,49,39,56,34,53
+         db 46,42,50,36,29,32
+         
     k_plus db 7 dup(00)
     selected_byte db ?
     selected_bit db  ?
@@ -29,7 +38,8 @@ data segment
     c dd 0h,0h,0h,0h,0h,0h,0h,0h,0h,0h,0h,0h,0h,0h,0h,0h
     d dd 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
     cd db 112 dup(0)
-    temp_dword dd 00000000h    
+    temp_dword dd 00000000h
+    k db 96 dup(0)    
     
     
     
@@ -101,6 +111,7 @@ macro permute_key pc_table,byte_no,key
      xor bx,bx
      xor cx,cx
      xor dx,dx
+     mov pointer,0h
      mov temp_byte,00000000b
      mov byte_builder_pointer,0h
      mov ax,8
@@ -448,7 +459,7 @@ proc arrange_k_plus
      ret
 endp arrange_k_plus
 
-proc join_16_k
+proc join_16_cd
      pusha
      xor di,di
      xor si,si
@@ -502,19 +513,73 @@ proc join_16_k
      mov cd+si,dh
      inc si
      add di,6
-     loop repeat
-     
-      
-     
-     
-     
-     
-     
-     
-     
+     loop repeat 
      popa
      ret
-endp join_16_k   
+endp join_16_cd
+
+proc generate_k
+     
+     pusha
+     xor cx,cx
+     xor si,si
+     mov cx,16
+     repeat3:
+     xor di,di
+     push cx
+     mov cx,6
+     repeat2:
+     permute_key pc_2,di
+     mov bl,temp_byte
+     mov k+si,bl
+     inc si
+     inc di
+     loop repeat2
+     pop cx
+     loop repeat3
+     popa
+     ret
+endp generate_k
+
+macro print_bin var,bytes_no
+      local again,again2,skip,endd
+      pusha
+      xor cx,cx
+      xor ax,ax
+      xor si,si 
+      mov cx,bytes_no
+      again:
+      mov al,var+si
+      push cx
+      mov cx,8
+      again2:
+      rcl al,1
+      jnc skip
+      push ax
+      mov ah,05h
+      mov dl,30h
+      int 21h
+      pop ax
+      jmp endd
+      skip:
+      push ax
+      mov ah,05h
+      mov dl,30h
+      int 21h
+      pop ax
+      endd:
+      loop again2
+      push ax
+      mov ah,05h
+      mov dl,20h
+      int 21h
+      pop ax
+      pop cx
+      loop again
+      popa
+endm print_bin
+      
+      
      
         
       
@@ -531,7 +596,8 @@ start:
     mov es, ax
     
     call arrange_k_plus
-    call join_16_k
+    call join_16_cd
+    print_bin k,96
     
     
 
