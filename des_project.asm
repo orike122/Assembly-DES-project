@@ -529,7 +529,7 @@ proc generate_k
      push cx
      mov cx,6
      repeat2:
-     permute_key pc_2,di
+     permute_key pc_2,di,cd
      mov bl,temp_byte
      mov k+si,bl
      inc si
@@ -598,6 +598,11 @@ start:
     call arrange_k_plus
     call join_16_cd
     print_bin k,96
+    ; wait for any key....    
+    mov ah, 1
+    int 21h 
+    mov ax, 4c00h ; exit to operating system.
+    int 21h 
     
     
 
