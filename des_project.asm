@@ -21,7 +21,7 @@ data segment
          db 03,28,15,06,21,10
          db 23,19,12,04,26,08
          db 16,07,27,20,13,02
-         db 41,52,31,87,47,55
+         db 41,52,31,37,47,55
          db 30,40,51,45,33,48
          db 44,49,39,56,34,53
          db 46,42,50,36,29,32
@@ -39,7 +39,8 @@ data segment
     d dd 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
     cd db 112 dup(0)
     temp_dword dd 00000000h
-    k db 96 dup(0)    
+    k db 96 dup(0)
+    para db 00h ;multipurpose parameter    
     
     
     
@@ -103,10 +104,10 @@ endm shift_left
 ;the proc rearrange the ekey according to the permution table pc-1, and then puts it in k_plus
 ;use selected_byte to know the specific byte in the ekey, use selected bit to know the specific bit it the byte                                          
 ;may use temp_byte as helper
-macro permute_key pc_table,byte_no,key
+macro permute_key pc_table,byte_no,key,addpara
      
      pusha
-     LOCAL again,skip_1,skip_2,skip_3,skip_4,skip_5,skip_6,skip_7,bit_1,bit_2,bit_3,bit_4,bit_5,bit_6,bit_7,end_bit_0,end_bit_1,end_bit_2,end_bit_3,end_bit_4,end_bit_5,end_bit_6,end_bit_7,end_builder,endd
+     LOCAL again,skip_add,skip_check,skip_1,skip_2,skip_3,skip_4,skip_5,skip_6,skip_7,bit_1,bit_2,bit_3,bit_4,bit_5,bit_6,bit_7,end_bit_0,end_bit_1,end_bit_2,end_bit_3,end_bit_4,end_bit_5,end_bit_6,end_bit_7,end_builder,endd
      xor ax,ax
      xor bx,bx
      xor cx,cx
@@ -121,7 +122,7 @@ macro permute_key pc_table,byte_no,key
      mov pointer,al
      xor ax,ax
      xor dx,dx
-     ;mov pointer,offset pc_1
+
 
      mov cx,8
      again:
@@ -132,9 +133,15 @@ macro permute_key pc_table,byte_no,key
      xor bx,bx
      mov dx,8
      div dl
+     cmp ah,00h
+     jnz skip_check
+     dec al
+     mov ah,08
+     skip_check:
      mov selected_byte,al;**** ;maybe al and ah need to be switched, you need to check it out
      mov selected_bit,ah
      mov bx,offset key
+     add bl,addpara ;in case you want to add by a certain parameter you can use addpara otherwise keep it zero.beware addpara has to be byte size
      add bl,selected_byte ;bx gets the offset of the selected byte
      mov dl,[bx] ;the selected byte copy to dl
      
@@ -298,31 +305,31 @@ proc arrange_k_plus
      pusha
      xor ax,ax
      ;1st byte
-     permute_key pc_1,0,ekey
+     permute_key pc_1,0,ekey,0
      mov al,temp_byte
      mov k_plus,al 
      ;2nd byte
-     permute_key pc_1,1,ekey
+     permute_key pc_1,1,ekey,0
      mov al,temp_byte
      mov k_plus+1,al
      ;3rd byte
-     permute_key pc_1,2,ekey
+     permute_key pc_1,2,ekey,0
      mov al,temp_byte
      mov k_plus+2,al       
      ;4th byte
-     permute_key pc_1,3,ekey
+     permute_key pc_1,3,ekey,0
      mov al,temp_byte
      mov k_plus+3,al
      ;5th byte
-     permute_key pc_1,4,ekey
+     permute_key pc_1,4,ekey,0
      mov al,temp_byte
      mov k_plus+4,al     
      ;6th byte
-     permute_key pc_1,5,ekey
+     permute_key pc_1,5,ekey,0
      mov al,temp_byte
      mov k_plus+5,al                    
      ;7th byte
-     permute_key pc_1,6,ekey
+     permute_key pc_1,6,ekey,0
      mov al,temp_byte
      mov k_plus+6,al                    
      
@@ -523,18 +530,23 @@ proc generate_k
      pusha
      xor cx,cx
      xor si,si
+     xor di,di
+     xor bx,bx
+     xor ax,ax
+     mov para,0h
      mov cx,16
      repeat3:
-     xor di,di
      push cx
      mov cx,6
      repeat2:
-     permute_key pc_2,di,cd
-     mov bl,temp_byte
-     mov k+si,bl
+     permute_key pc_2,di,cd,para
+     mov al,temp_byte
+     mov k+si,al
      inc si
      inc di
      loop repeat2
+     xor di,di
+     add para,7
      pop cx
      loop repeat3
      popa
@@ -556,21 +568,22 @@ macro print_bin var,bytes_no
       rcl al,1
       jnc skip
       push ax
-      mov ah,05h
-      mov dl,30h
+      mov ah,02h
+      mov dl,31h
       int 21h
       pop ax
       jmp endd
       skip:
       push ax
-      mov ah,05h
+      mov ah,02h       
       mov dl,30h
       int 21h
       pop ax
       endd:
       loop again2
+      inc si
       push ax
-      mov ah,05h
+      mov ah,02h
       mov dl,20h
       int 21h
       pop ax
@@ -578,6 +591,8 @@ macro print_bin var,bytes_no
       loop again
       popa
 endm print_bin
+
+     
       
       
      
@@ -597,10 +612,8 @@ start:
     
     call arrange_k_plus
     call join_16_cd
+    call generate_k
     print_bin k,96
-    ; wait for any key....    
-    mov ah, 1
-    int 21h 
     mov ax, 4c00h ; exit to operating system.
     int 21h 
     
