@@ -1,10 +1,8 @@
 ; multi-segment executable file template.
 
 data segment
-    ;left side of the the message after converted to hexa
-    L_hexa_message db 01h,23h,45h,67h
-    ;right side of the the message after converted to hexa
-    R_hexa_message db 89h,0ABh,0CDh,0EFh 
+    ;the message after converted to hexa
+     m db 01h,23h,45h,67h,89h,0abh,0cdh,0efh 
     ;encryption key that was choosed by the user
     ekey db 13h,34h,57h,79h,9Bh,0BCh,0DFh,0F1h
     ;pc-1 means - bit arrangment to create the permuted key - k+
@@ -26,6 +24,25 @@ data segment
          db 44,49,39,56,34,53
          db 46,42,50,36,29,32
          
+    ip_tbl db 58,50,42,34,26,18,10,02
+           db 60,52,44,36,28,20,12,04
+           db 62,54,46,38,30,22,14,06
+           db 64,56,48,40,32,24,16,08
+           db 57,49,41,33,25,17,09,01
+           db 59,51,43,35,27,19,11,03
+           db 61,53,45,37,29,21,13,05
+           db 63,55,47,39,31,23,15,07
+     
+    e_tbl db 32,01,02,03,04,05
+          db 04,05,06,07,08,09
+          db 08,09,10,11,12,13
+          db 12,13,14,15,16,17
+          db 16,17,18,19,20,21
+          db 20,21,22,23,24,25
+          db 24,25,26,27,28,29
+          db 28,29,30,31,32,01      
+           
+         
     k_plus db 7 dup(00)
     selected_byte db ?
     selected_bit db  ?
@@ -40,7 +57,16 @@ data segment
     cd db 112 dup(0)
     temp_dword dd 00000000h
     k db 96 dup(0)
-    para db 00h ;multipurpose parameter    
+    para db 00h ;multipurpose parameter
+    ip db 8 dup(0)
+    l_0 db 4 dup(0)
+    r_0 db 4 dup(0)
+    l db 64 dup(0)
+    r db 64 dup(0)
+    e db 6 dup(0)
+    l_index db 0
+    r_index db 0
+        
     
     
     
@@ -590,8 +616,136 @@ macro print_bin var,bytes_no
       pop cx
       loop again
       popa
-endm print_bin
+endm print_bin 
 
+proc arrange_ip
+     pusha
+     xor cx,cx
+     xor si,si
+     xor ax,ax
+     mov cx,8
+     agn:
+     permute_key ip_tbl,si,m,0
+     mov al,temp_byte
+     mov ip+si,al
+     inc si
+     loop agn
+     xor cx,cx
+     xor si,si
+     xor ax,ax
+     xor di,di
+     mov cx,4
+     agn2:
+     mov al,ip+si
+     mov l_0+di,al
+     inc di
+     inc si
+     loop agn2
+     mov cx,4
+     xor di,di
+     agn3:
+     mov al,ip+si
+     mov r_0+di,al
+     inc di
+     inc si
+     loop agn3
+     
+     popa
+     ret
+endp arrange_ip
+
+proc create_l
+     pusha
+     xor si,si;l index pointer(0 is 1, 1 is 2 and so on..)
+     xor di,di;l byte pointer 
+     xor ax,ax
+     xor cx,cx
+     ;create l_1
+     mov cx,4
+     cpy:
+     mov al,r_0+di
+     mov l+di,al
+     inc di
+     loop cpy
+     
+     ;create l_2-16
+     popa
+     ret
+endp create_l
+
+proc create_r 
+      pusha
+      
+      xor si,si
+      xor di,di
+      xor ax,ax
+      xor cx,cx
+      xor bx,bx
+      mov para,0h
+      ;function f
+      ;generate e,
+      cmp r_index,0
+      jnz cont1
+      mov cx,6
+      agn4:
+      permute_key e_tbl,si,r_0,0
+      mov bl,temp_byte
+      mov e+si,bl
+      inc si
+      loop agn4
+      jmp endd_e
+      
+      cont1:
+      mov al,r_index
+      mov bl,4
+      mul bl 
+      mov para,al
+      sub para,4
+      mov cx,6
+      agn5:
+      permute_key e_tbl,si,r,para
+      mov bl,temp_byte
+      mov e+si,bl
+      inc si
+      loop agn5
+      endd_e:
+      
+      mov al,r_index
+      mov bl,6
+      mul bl
+      mov para,al
+      sub para,6
+      xor_multibytes e,k,6
+      
+      inc r_index
+      popa
+      ret
+endp create_r
+;the macro do xor for to multibytes arrays
+;it gets 2 vars, and return the xored data to the 1st var
+;also it gets no of bytes in each array
+;add para to add certain parameter otherwise keep it zero
+macro xor_multibytes var1,var2,bytes_no
+      pusha
+      xor si,si
+      xor ax,ax
+      xor dx,dx
+      xor cx,cx
+      xor di,di
+      mov cx,bytes_no
+      again:
+      mov al,var1[di]
+      mov dl,var2[si]
+      xor al,dl
+      mov var1[di],al
+      inc si
+      inc di
+      loop again 
+      popa
+endm xor_multibytes
+      
+      
+      
      
       
       
@@ -613,7 +767,9 @@ start:
     call arrange_k_plus
     call join_16_cd
     call generate_k
-    print_bin k,96
+    call arrange_ip
+    call create_r
+    print_bin e,6
     mov ax, 4c00h ; exit to operating system.
     int 21h 
     
