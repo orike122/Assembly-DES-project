@@ -66,6 +66,7 @@ data segment
     e db 6 dup(0)
     l_index db 0
     r_index db 0
+    b db 8 dup(0)
         
     
     
@@ -716,6 +717,8 @@ proc create_r
       mov para,al
       sub para,6
       xor_multibytes e,k,6
+      call generate_8_b
+      
       
       inc r_index
       popa
@@ -734,15 +737,81 @@ macro xor_multibytes var1,var2,bytes_no
       xor di,di
       mov cx,bytes_no
       again:
-      mov al,var1[di]
-      mov dl,var2[si]
+      mov al,var1+di
+      mov dl,var2+si
       xor al,dl
-      mov var1[di],al
+      mov var1+di,al
       inc si
       inc di
       loop again 
       popa
 endm xor_multibytes
+proc generate_8_b
+     pusha
+     xor si,si
+     xor cx,cx
+     mov temp_byte,0h
+     ;zero b
+     mov cx,8
+     agn6:
+     mov b+si,0h
+     inc si
+     loop agn6
+     
+     ;taking first 6 bits from e and put them
+     ;into first cell of b
+     xor si,si
+     xor ax,ax
+     xor bx,bx
+     xor cx,cx
+     ;building 4 chunks of 6 bits
+     ;doing this twice
+     mov cx,2
+     agn7:
+     cmp cx,2
+     jnz skp_byt 
+     mov al,e+si
+     and al,11111100b
+     mov b+si,al
+     jmp skp_skp
+     skp_byt:
+     mov al,e+si
+     and al,11111100b
+     mov b+si+1,al
+     
+     skp_skp:
+     mov al,e+si
+     and al,00000011b
+     shl al,6
+     inc si
+     mov bl,e+si
+     and bl,11110000b
+     shr bl,2
+     or bl,al
+     mov b+si,bl
+     
+     mov bl,e+si
+     and bl,00001111b
+     shl bl,4
+     inc si
+     mov al,e+si
+     and al,11000000b
+     shr al,4
+     or bl,al
+     mov b+si,bl
+     
+     mov bl,e+si
+     and bl,00111111b
+     shl bl,2
+     inc si
+     mov b+si,bl
+     loop agn7
+     popa
+     ret
+endp generate_8_b
+     
+      
+     
       
       
       
@@ -769,7 +838,7 @@ start:
     call generate_k
     call arrange_ip
     call create_r
-    print_bin e,6
+    print_bin b,8
     mov ax, 4c00h ; exit to operating system.
     int 21h 
     
