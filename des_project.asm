@@ -679,6 +679,7 @@ proc create_r
       
       xor si,si
       xor di,di
+      xor di,di
       xor ax,ax
       xor cx,cx
       xor bx,bx
@@ -761,6 +762,7 @@ proc generate_8_b
      ;taking first 6 bits from e and put them
      ;into first cell of b
      xor si,si
+     xor di,di
      xor ax,ax
      xor bx,bx
      xor cx,cx
@@ -768,18 +770,13 @@ proc generate_8_b
      ;doing this twice
      mov cx,2
      agn7:
-     cmp cx,2
-     jnz skp_byt 
+ 
      mov al,e+si
      and al,11111100b
-     mov b+si,al
-     jmp skp_skp
-     skp_byt:
-     mov al,e+si
-     and al,11111100b
-     mov b+si+1,al
+     mov b+di,al
+     inc di
      
-     skp_skp:
+
      mov al,e+si
      and al,00000011b
      shl al,6
@@ -788,7 +785,8 @@ proc generate_8_b
      and bl,11110000b
      shr bl,2
      or bl,al
-     mov b+si,bl
+     mov b+di,bl
+     inc di
      
      mov bl,e+si
      and bl,00001111b
@@ -798,13 +796,15 @@ proc generate_8_b
      and al,11000000b
      shr al,4
      or bl,al
-     mov b+si,bl
+     mov b+di,bl
+     inc di
      
      mov bl,e+si
      and bl,00111111b
      shl bl,2
      inc si
-     mov b+si,bl
+     mov b+di,bl
+     inc di
      loop agn7
      popa
      ret
