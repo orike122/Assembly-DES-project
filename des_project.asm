@@ -40,7 +40,65 @@ data segment
           db 16,17,18,19,20,21
           db 20,21,22,23,24,25
           db 24,25,26,27,28,29
-          db 28,29,30,31,32,01      
+          db 28,29,30,31,32,01
+          
+          
+          
+    s1 db 14,04,13,01,02,15,11,08,03,10,06,12,05,09,00,07
+       db 00,15,07,04,14,02,13,01,10,06,12,11,09,05,03,08
+       db 04,01,14,08,13,06,02,11,15,12,09,07,03,10,05,00
+       db 15,12,08,02,04,09,01,07,05,11,03,14,10,00,06,13
+       
+       
+    s2 db 15,01,08,14,06,11,03,04,09,07,02,13,12,00,05,10
+       db 03,13,04,07,15,02,08,14,12,00,01,10,06,09,11,05
+       db 00,14,07,11,10,04,13,01,05,08,12,06,09,03,02,15
+       db 13,08,10,01,03,15,04,02,11,06,07,12,00,05,14,09
+    
+       
+    s3 db 10,00,09,14,06,03,15,05,01,13,12,07,11,04,02,08
+       db 13,07,00,09,03,04,06,10,02,08,05,14,12,11,15,01
+       db 13,06,04,09,08,15,03,00,11,01,02,12,05,10,14,07
+       db 01,10,13,00,06,09,08,07,04,15,14,03,11,05,02,12
+       
+    
+    s4 db 07,13,14,03,00,06,09,10,01,02,08,05,11,12,04,15
+       db 13,08,11,05,06,15,00,03,04,07,02,12,01,10,14,09
+       db 10,06,09,00,12,11,07,13,15,01,03,14,05,02,08,04
+       db 03,15,00,06,10,01,13,08,09,04,05,11,12,07,02,14
+       
+       
+    s5 db 02,12,04,01,07,10,11,06,08,05,03,15,13,00,14,09
+       db 14,11,02,12,04,07,13,01,05,00,15,10,03,09,08,06
+       db 04,02,01,11,10,13,07,08,15,09,12,05,06,03,00,14
+       db 11,08,12,07,01,14,02,13,06,15,00,09,10,04,05,03
+       
+       
+    s6 db 12,01,10,15,09,02,06,08,00,13,03,04,14,07,05,11
+       db 10,15,04,02,07,12,09,05,06,01,13,14,00,11,03,08
+       db 09,14,15,05,02,08,12,03,07,00,04,10,01,13,11,06
+       db 04,03,02,12,09,05,15,10,11,14,01,07,06,00,08,13
+       
+       
+    s7 db 04,11,02,14,15,00,08,13,03,12,09,07,05,10,06,01
+       db 13,00,11,07,04,09,01,10,14,03,05,12,02,15,08,06
+       db 01,04,11,13,12,03,07,14,10,15,06,08,00,05,09,02
+       db 06,11,13,08,01,04,10,07,09,05,00,15,14,02,03,12
+       
+       
+    s8 db 13,02,08,04,06,15,11,01,10,09,03,14,05,00,12,07
+       db 01,15,13,08,10,03,07,04,12,05,06,11,00,14,09,02
+       db 07,11,04,01,09,12,14,02,00,06,10,13,15,03,05,08
+       db 02,01,14,07,04,10,08,13,15,12,09,00,03,05,06,11
+       
+    p db 16,07,20,21
+      db 29,12,28,17
+      db 01,15,23,26
+      db 05,18,31,10
+      db 02,08,24,14
+      db 32,27,03,09
+      db 19,13,30,06
+      db 22,11,04,25   
            
          
     k_plus db 7 dup(00)
@@ -48,7 +106,7 @@ data segment
     selected_bit db  ?
     temp_byte db 00000000b
     byte_builder_pointer db 0
-    pointer db offset pc_1
+    pointer dw 0000h
     k_plus_l dd 0h
     k_plus_r dd 0h
     shifts db 01,01,02,02,02,02,02,02,01,02,02,02,02,02,02,01
@@ -67,6 +125,13 @@ data segment
     l_index db 0
     r_index db 0
     b db 8 dup(0)
+    s_row db 0
+    s_column db 0
+    s db 4 dup(0)
+    f db 4 dup(0)
+    temp_offset1 dw 0000h
+    temp_offset2 dw 0000h
+    temp_arr db 4 dup(0)
         
     
     
@@ -139,14 +204,14 @@ macro permute_key pc_table,byte_no,key,addpara
      xor bx,bx
      xor cx,cx
      xor dx,dx
-     mov pointer,0h
+     mov pointer,0000h
      mov temp_byte,00000000b
      mov byte_builder_pointer,0h
      mov ax,8
      mov dx,byte_no
      mul dx
      add ax,offset pc_table
-     mov pointer,al
+     mov pointer,ax
      xor ax,ax
      xor dx,dx
 
@@ -155,7 +220,7 @@ macro permute_key pc_table,byte_no,key,addpara
      again:
      xor bx,bx
      xor ax,ax
-     mov bl,pointer
+     mov bx,pointer
      mov al,[bx]
      xor bx,bx
      mov dx,8
@@ -662,14 +727,39 @@ proc create_l
      xor ax,ax
      xor cx,cx
      ;create l_1
+      
+     ;1
+     cmp l_index,0
+     jnz skp_i0
      mov cx,4
      cpy:
      mov al,r_0+di
      mov l+di,al
      inc di
      loop cpy
+     jmp end_i
      
+     skp_i0:
      ;create l_2-16
+     xor bx,bx
+     xor cx,cx
+     
+     mov al,l_index
+     mov bl,4
+     mul bl
+     mov si,ax
+     mov di,ax
+     sub si,4 
+     
+     mov cx,4
+     agn_i:
+     mov al,r+si
+     mov l+di,al
+     inc si
+     inc di
+     loop agn_i
+     end_i:
+     inc l_index
      popa
      ret
 endp create_l
@@ -712,15 +802,65 @@ proc create_r
       loop agn5
       endd_e:
       
+      xor si,si
+      xor di,di
       mov al,r_index
       mov bl,6
       mul bl
       mov para,al
-      sub para,6
-      xor_multibytes e,k,6
+
+      skp_sub:
+      xor_multibytes e,k,6,0,para 
+       
       call generate_8_b
+      call access_s_boxes
+      call arrange_f
+      
+      ;1
+      cmp r_index,0
+      jnz skp_bld0
+      
+      xor_multibytes f,l_0,4,0,0
+      xor si,si
+      xor cx,cx
+      xor ax,ax
+      mov cx,4
+      
+      cpy2:
+      mov al,f+si
+      mov r+si,al
+      inc si
+      loop cpy2
+      jmp end_bld
+      
+      ;2-16
+      skp_bld0: 
+      mov al,r_index
+      mov bl,4
+      mul bl
+      sub al,4
+      mov para,al
+      xor_multibytes f,l,4,0,para
+      
+      xor si,si
+      xor cx,cx
+      xor ax,ax
+      xor di,di
+      mov al,r_index
+      mov bl,4
+      mul bl
+      mov di,ax
+      xor ax,ax
+      mov cx,4
       
       
+      cpy3:
+      mov al,f+si
+      mov r+di,al
+      inc si
+      inc di
+      loop cpy3
+      end_bld:
       inc r_index
       popa
       ret
@@ -729,13 +869,19 @@ endp create_r
 ;it gets 2 vars, and return the xored data to the 1st var
 ;also it gets no of bytes in each array
 ;add para to add certain parameter otherwise keep it zero
-macro xor_multibytes var1,var2,bytes_no
+macro xor_multibytes var1,var2,bytes_no,addpara1,addpara2
       pusha
+      LOCAL again
       xor si,si
       xor ax,ax
       xor dx,dx
       xor cx,cx
       xor di,di
+      mov al,addpara1
+      mov di,ax
+      mov al,addpara2
+      mov si,ax
+      xor ax,ax
       mov cx,bytes_no
       again:
       mov al,var1+di
@@ -809,24 +955,164 @@ proc generate_8_b
      popa
      ret
 endp generate_8_b
+
+proc access_s_boxes
+     pusha
+     xor ax,ax
+     xor si,si
+     xor cx,cx
+     mov cx,8
      
-      
+     agn_box:
+     ;find s box row
+     mov ah,b+si
+     and ah,00000100b
+     shr ah,2
+     mov al,ah
+     mov ah,b+si
+     and ah,10000000b
+     shr ah,6
+     or al,ah
+     mov s_row,al
      
-      
-      
-      
+     ;find s box column
+     xor ax,ax
+     mov al,b+si
+     and al,01111000b
+     shr al,3
+     mov s_column,al
      
-      
-      
+     ;access to s box
+     xor di,di
+     xor ax,ax
+     xor bx,bx
+     mov al,s_row
+     mov bl,16
+     mul bl
+     add al,s_column
+     mov di,ax
      
-        
-      
+     
+     xor bx,bx
+     ;s1
+     cmp si,0
+     jnz box2
+     mov bl,s1+di
+     jmp end_box
+     
+     ;s2
+     box2:
+     cmp si,1
+     jnz box3
+     mov bl,s2+di
+     jmp end_box
+     
+     ;s3
+     box3:
+     cmp si,2
+     jnz box4
+     mov bl,s3+di
+     jmp end_box
+     
+     ;s4
+     box4:
+     cmp si,3
+     jnz box5
+     mov bl,s4+di
+     jmp end_box
+     
+     ;s5
+     box5:
+     cmp si,4
+     jnz box6
+     mov bl,s5+di
+     jmp end_box
+     
+     ;s6
+     box6:
+     cmp si,5
+     jnz box7
+     mov bl,s6+di
+     jmp end_box
+     
+     ;s7
+     box7:
+     cmp si,6
+     jnz box8
+     mov bl,s7+di
+     jmp end_box
+     
+     ;s8
+     box8:
+     cmp si,7
+     jnz end_box
+     mov bl,s8+di
+     
+     end_box:
+     
+     mov s+si,bl
+     
+     inc si
+     loop agn_box
+     
+     xor ax,ax
+     xor si,si
+     xor di,di
+     xor cx,cx
+     mov cx,4
+     agn_arr:
+     mov al,s+si
+     shl al,4
+     inc si
+     mov ah,s+si
+     or al,ah
+     inc si
+     mov s+di,al
+     inc di
+     loop agn_arr
+     
+     popa
+     ret
+endp access_s_boxes
+
+proc arrange_f
+     pusha
+     xor ax,ax
+     xor si,si
+     xor cx,cx
+     
+     mov cx,4
+     ;agnf:  
+     ;permute_key p,si,s,0
+     ;mov al,temp_byte
+     ;mov f+si,al
+     ;inc si
+     ;loop agnf
+     
+     ;1
+     permute_key p,0,s,0
+     mov al,temp_byte
+     mov f,al
+     
+     ;2
+     permute_key p,1,s,0
+     mov al,temp_byte
+     mov f+1,al
+     ;3
+     permute_key p,2,s,0
+     mov al,temp_byte
+     mov f+2,al
+     ;4
+     permute_key p,3,s,0
+     mov al,temp_byte
+     mov f+3,al
      
      
+     popa
+     ret
+endp arrange_f  
      
-     
-         
-    
+  
 start:
 ; set segment registers:
     mov ax, data
@@ -837,8 +1123,56 @@ start:
     call join_16_cd
     call generate_k
     call arrange_ip
+    xor cx,cx
+    mov cx,16
+    crt_l_r:
+    call create_l
     call create_r
-    print_bin b,8
+    loop crt_l_r
+    
+    xor si,si
+    xor cx,cx
+    xor di,di
+    mov si,60
+    xor ax,ax
+
+    
+    mov cx,4
+    agn_p:
+    mov al,l+si
+    mov temp_arr+di,al
+    inc si
+    inc di
+    loop agn_p
+     
+    
+    print_bin temp_arr,4
+    
+    mov dx,10
+    mov ah,02
+    int 21h
+    mov dx,13
+    mov ah,02
+    int 21h
+    
+    xor si,si
+    xor cx,cx
+    xor di,di
+    mov si,60
+
+    xor ax,ax
+    
+    mov cx,4
+    agn_p2:
+    mov al,r+si
+    mov temp_arr+di,al
+    inc si
+    inc di
+    loop agn_p2
+     
+    
+    print_bin temp_arr,4
+
     mov ax, 4c00h ; exit to operating system.
     int 21h 
     
