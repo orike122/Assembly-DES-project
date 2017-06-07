@@ -2,9 +2,9 @@
 
 data segment
     ;the message after converted to hexa
-     m db 01h,23h,45h,67h,89h,0abh,0cdh,0efh 
+     m db 8 dup(0) 
     ;encryption key that was choosed by the user
-    ekey db 13h,34h,57h,79h,9Bh,0BCh,0DFh,0F1h
+    ekey db 8 dup(0)
     ;pc-1 means - bit arrangment to create the permuted key - k+
     pc_1 db 57,49,41,33,25,17,09
          db 01,58,50,42,34,26,18
@@ -145,6 +145,13 @@ data segment
     lp db 4 dup(0)
     rl db 8 dup(0)
     enc_msg db 8 dup(0)
+    m_ascii db 19 dup(0)
+    ekey_ascii db 19 dup(0)
+    enc_msg_ascii 16 dup(0),"$"
+    error_msg db "You typed in some illigeal charecters, please insert hexadecimal number up to 16 charecter, not h nor zero before letters alowed. Press any key to try again...","$"
+    ask_msg db "Please enter the 16 charecters length hexa message: ","$"
+    ask_key db "Please enter the 16 charecters length hexa encryption key: ","$"
+    show_enc db "This is the encrypted message: ","$"
         
     
     
@@ -157,6 +164,199 @@ stack segment
 ends
 
 code segment
+    
+;INPUT OUTPUT
+macro get_input dest,len
+     pusha
+     mov dx,offset dest
+     mov bx,dx
+     mov cl,len
+     inc cl
+     mov [bx],cl
+     mov ah,0ah
+     int 21h
+     popa
+endm get_input
+
+macro str2hex source,dest
+     pusha 
+     LOCAL agn_bld_char,goback,error,check_hex,skp_hex,check_cap,skp_1st_char,end_str
+     xor di,di
+     xor si,si
+     mov si,2
+     xor cx,cx
+     mov cx,8
+     agn_bld_char:
+     mov pointer,0
+     xor ax,ax
+     xor dx,dx
+     xor bx,bx
+     goback:
+     mov al,source+si
+
+     ;check
+     cmp al,30h
+     js error
+     mov bl,39h
+     cmp bl,al
+     js check_hex
+     sub al,30h
+     jmp skp_hex
+     
+     check_hex:
+     cmp al,41h
+     js error
+     mov bl,46h
+     cmp bl,al
+     js check_cap
+     sub al,55
+     jmp skp_hex
+     
+     check_cap:
+     cmp al,61h
+     js error
+     mov bl,66h
+     cmp bl,al
+     js error
+     sub al,87
+     
+     skp_hex:
+     
+     cmp pointer,0
+     jnz skp_1st_char
+     inc si
+     inc pointer
+     mov dh,al
+     jmp goback
+     skp_1st_char:
+     mov bl,10h
+     mov dl,al
+     mov al,dh
+     mul bl
+     mov dh,al
+     or dh,dl
+     mov dest+di,dh
+     inc si
+     inc di
+     loop agn_bld_char
+     
+     jmp end_str
+     error:
+     ;reset screen
+     call cln_scr
+     set_cur 0,0
+     print_msg error_msg
+     ; wait for any key....    
+     mov ah, 1
+     int 21h
+     call get_msgnkey
+
+     end_str:
+     popa
+endm str2hex
+
+macro print_msg pmsg
+      pusha
+      mov ah,09h
+      mov dx,offset pmsg
+      int 21h
+
+
+      popa
+endm print_msg
+
+proc cln_scr
+     pusha
+      ;clean screen
+      mov ah,6
+      mov al,0
+      mov bh,0_0fh
+      xor cx,cx
+      mov dh,200
+      mov dl,200
+      int 10h
+      
+     popa
+     ret
+endp cln_scr
+
+macro set_cur x,y
+      ;set cursor
+      pusha
+      mov ah,2
+      mov bh,0
+      xor dx,dx
+      int 10h
+      popa
+endm set_cur x,y
+
+proc get_msgnkey
+     pusha
+     ;reset screen
+     call cln_scr
+     set_cur 0,0
+     print_msg ask_msg
+     get_input m_ascii,16
+     str2hex m_ascii,m
+     ;reset screen
+     call cln_scr
+     set_cur 0,0
+     print_msg ask_key
+     get_input ekey_ascii,16
+     str2hex ekey_ascii,ekey
+     popa
+     ret
+endp get_msgnkey
+
+macro hex2str source,dest
+      pusha
+      LOCAL again,cont,cont1,skp_hex,skp_hex1 
+      xor si,si
+      xor ax,ax
+      xor cx,cx
+      xor di,di
+      mov cx,8
+      again:
+      mov al,source+si
+      and al,11110000b
+      shr al,4
+
+      
+      cmp al,0ah
+      js skp_hex
+      add al,55
+      mov dest+di,al
+      inc di
+      jmp cont
+      
+      skp_hex:
+      add al,30h
+      mov dest+di,al
+      inc di
+      
+      
+      cont:
+      mov al,source+si
+      and al,00001111b
+      
+      cmp al,0ah
+      js skp_hex1
+      add al,55
+      mov dest+di,al
+      inc di
+      jmp cont1
+      
+      skp_hex1:
+      add al,30h
+      mov dest+di,al
+      inc di
+      cont1:
+      inc si
+      loop again
+      popa
+endm hex2str
+
+;END INPUT OUTPUT
 
 macro shift_left dword,shft_no
      pusha 
@@ -1149,6 +1349,9 @@ start:
     mov ds, ax
     mov es, ax
     
+    ;INPUT
+    call get_msgnkey
+    
     call arrange_k_plus
     call join_16_cd
     call generate_k
@@ -1162,16 +1365,14 @@ start:
     
     call join_rl
      
-    print_bin enc_msg,8
+    ;OUTPUT
+    hex2str enc_msg,enc_msg_ascii
+    ;reset screen
+    call cln_scr
+    set_cur 0,0
+    print_msg show_enc
+    print_msg enc_msg_ascii
     
-;    mov dx,10
-;    mov ah,02
-;    int 21h
-;    mov dx,13
-;    mov ah,02
-;    int 21h
-;     
-;    print_bin r,4
 
     mov ax, 4c00h ; exit to operating system.
     int 21h 
