@@ -98,7 +98,17 @@ data segment
       db 02,08,24,14
       db 32,27,03,09
       db 19,13,30,06
-      db 22,11,04,25   
+      db 22,11,04,25
+      
+      
+   pc_minus db 40,08,48,16,56,24,64,32
+            db 39,07,47,15,55,23,63,31
+            db 38,06,46,14,54,22,62,30
+            db 37,05,45,13,53,21,61,29
+            db 36,04,44,12,52,20,60,28
+            db 35,03,43,11,51,19,59,27
+            db 34,02,42,10,50,18,58,26 
+            db 33,01,41,09,49,17,57,25  
            
          
     k_plus db 7 dup(00)
@@ -133,6 +143,8 @@ data segment
     temp_offset2 dw 0000h
     temp_arr db 4 dup(0)
     lp db 4 dup(0)
+    rl db 8 dup(0)
+    enc_msg db 8 dup(0)
         
     
     
@@ -1091,7 +1103,44 @@ proc arrange_f
      
      popa
      ret
-endp arrange_f  
+endp arrange_f
+
+proc join_rl
+     pusha
+     xor ax,ax
+     xor si,si
+     xor cx,cx
+     
+     mov cx,4
+     cpy_r:
+     mov al,r+si
+     mov rl+si,al
+     inc si
+     loop cpy_r
+     
+     xor ax,ax
+     xor di,di
+     mov cx,4
+     cpy_l:
+     mov al,l+di
+     mov rl+si,al
+     inc si
+     inc di
+     loop cpy_l
+     
+     xor di,di
+     xor cx,cx
+     xor ax,ax
+     mov cx,8
+     agn_pr:
+     permute_key pc_minus,di,rl,0
+     mov al,temp_byte
+     mov enc_msg+di,al 
+     inc di
+     loop agn_pr
+     popa
+     ret
+endp join_rl     
      
   
 start:
@@ -1110,17 +1159,19 @@ start:
     call create_l
     call create_r
     loop crt_l_r
-     
-    print_bin l,4
     
-    mov dx,10
-    mov ah,02
-    int 21h
-    mov dx,13
-    mov ah,02
-    int 21h
+    call join_rl
      
-    print_bin r,4
+    print_bin enc_msg,8
+    
+;    mov dx,10
+;    mov ah,02
+;    int 21h
+;    mov dx,13
+;    mov ah,02
+;    int 21h
+;     
+;    print_bin r,4
 
     mov ax, 4c00h ; exit to operating system.
     int 21h 
