@@ -132,6 +132,7 @@ data segment
     temp_offset1 dw 0000h
     temp_offset2 dw 0000h
     temp_arr db 4 dup(0)
+    lp db 4 dup(0)
         
     
     
@@ -233,8 +234,12 @@ macro permute_key pc_table,byte_no,key,addpara
      mov selected_byte,al;**** ;maybe al and ah need to be switched, you need to check it out
      mov selected_bit,ah
      mov bx,offset key
-     add bl,addpara ;in case you want to add by a certain parameter you can use addpara otherwise keep it zero.beware addpara has to be byte size
-     add bl,selected_byte ;bx gets the offset of the selected byte
+     xor ax,ax
+     mov al,addpara
+     add bx,ax ;in case you want to add by a certain parameter you can use addpara otherwise keep it zero.beware addpara has to be byte size
+     xor ax,ax
+     mov al,selected_byte
+     add bx,ax ;bx gets the offset of the selected byte
      mov dl,[bx] ;the selected byte copy to dl
      
      ;finds the selected bit using "and" and "shl"
@@ -741,25 +746,28 @@ proc create_l
      
      skp_i0:
      ;create l_2-16
-     xor bx,bx
      xor cx,cx
-     
-     mov al,l_index
-     mov bl,4
-     mul bl
-     mov si,ax
-     mov di,ax
-     sub si,4 
-     
+     xor si,si
+     xor ax,ax
      mov cx,4
-     agn_i:
-     mov al,r+si
-     mov l+di,al
+     ;copy old l to lp
+     cpy_lp:
+     mov al,l+si
+     mov lp+si,al
      inc si
-     inc di
-     loop agn_i
+     loop cpy_lp
+     
+     ;copy old r to l
+     xor si,si
+     mov cx,4
+     cpy_r2l:
+     mov al,r+si
+     mov l+si,al
+     inc si
+     loop cpy_r2l
      end_i:
      inc l_index
+     
      popa
      ret
 endp create_l
@@ -788,14 +796,9 @@ proc create_r
       jmp endd_e
       
       cont1:
-      mov al,r_index
-      mov bl,4
-      mul bl 
-      mov para,al
-      sub para,4
       mov cx,6
       agn5:
-      permute_key e_tbl,si,r,para
+      permute_key e_tbl,si,r,0
       mov bl,temp_byte
       mov e+si,bl
       inc si
@@ -809,7 +812,6 @@ proc create_r
       mul bl
       mov para,al
 
-      skp_sub:
       xor_multibytes e,k,6,0,para 
        
       call generate_8_b
@@ -820,7 +822,15 @@ proc create_r
       cmp r_index,0
       jnz skp_bld0
       
-      xor_multibytes f,l_0,4,0,0
+      xor_multibytes f,l_0,4,0,0 
+      jmp skp_rest
+      
+      ;2-16
+      skp_bld0: 
+      xor_multibytes f,lp,4,0,0 
+      
+      skp_rest:
+      
       xor si,si
       xor cx,cx
       xor ax,ax
@@ -831,36 +841,7 @@ proc create_r
       mov r+si,al
       inc si
       loop cpy2
-      jmp end_bld
       
-      ;2-16
-      skp_bld0: 
-      mov al,r_index
-      mov bl,4
-      mul bl
-      sub al,4
-      mov para,al
-      xor_multibytes f,l,4,0,para
-      
-      xor si,si
-      xor cx,cx
-      xor ax,ax
-      xor di,di
-      mov al,r_index
-      mov bl,4
-      mul bl
-      mov di,ax
-      xor ax,ax
-      mov cx,4
-      
-      
-      cpy3:
-      mov al,f+si
-      mov r+di,al
-      inc si
-      inc di
-      loop cpy3
-      end_bld:
       inc r_index
       popa
       ret
@@ -1129,24 +1110,8 @@ start:
     call create_l
     call create_r
     loop crt_l_r
-    
-    xor si,si
-    xor cx,cx
-    xor di,di
-    mov si,60
-    xor ax,ax
-
-    
-    mov cx,4
-    agn_p:
-    mov al,l+si
-    mov temp_arr+di,al
-    inc si
-    inc di
-    loop agn_p
      
-    
-    print_bin temp_arr,4
+    print_bin l,4
     
     mov dx,10
     mov ah,02
@@ -1154,24 +1119,8 @@ start:
     mov dx,13
     mov ah,02
     int 21h
-    
-    xor si,si
-    xor cx,cx
-    xor di,di
-    mov si,60
-
-    xor ax,ax
-    
-    mov cx,4
-    agn_p2:
-    mov al,r+si
-    mov temp_arr+di,al
-    inc si
-    inc di
-    loop agn_p2
      
-    
-    print_bin temp_arr,4
+    print_bin r,4
 
     mov ax, 4c00h ; exit to operating system.
     int 21h 
