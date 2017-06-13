@@ -613,35 +613,14 @@ proc arrange_k_plus
      
      pusha
      xor ax,ax
-     ;1st byte
-     permute_key pc_1,0,ekey,0
+     xor si,si
+     mov cx,7
+     agn_prmt_key:
+     permute_key pc_1,si,ekey,0
      mov al,temp_byte
-     mov k_plus,al 
-     ;2nd byte
-     permute_key pc_1,1,ekey,0
-     mov al,temp_byte
-     mov k_plus+1,al
-     ;3rd byte
-     permute_key pc_1,2,ekey,0
-     mov al,temp_byte
-     mov k_plus+2,al       
-     ;4th byte
-     permute_key pc_1,3,ekey,0
-     mov al,temp_byte
-     mov k_plus+3,al
-     ;5th byte
-     permute_key pc_1,4,ekey,0
-     mov al,temp_byte
-     mov k_plus+4,al     
-     ;6th byte
-     permute_key pc_1,5,ekey,0
-     mov al,temp_byte
-     mov k_plus+5,al                    
-     ;7th byte
-     permute_key pc_1,6,ekey,0
-     mov al,temp_byte
-     mov k_plus+6,al                    
-     
+     mov k_plus+si,al
+     inc si
+     loop agn_prmt_key 
      
      xor bx,bx
      mov bl,k_plus+1
@@ -1275,30 +1254,13 @@ proc arrange_f
      xor cx,cx
      
      mov cx,4
-     ;agnf:  
-     ;permute_key p,si,s,0
-     ;mov al,temp_byte
-     ;mov f+si,al
-     ;inc si
-     ;loop agnf
-     
-     ;1
-     permute_key p,0,s,0
+     xor si,si
+     agnf:
+     permute_key p,si,s,0
      mov al,temp_byte
-     mov f,al
-     
-     ;2
-     permute_key p,1,s,0
-     mov al,temp_byte
-     mov f+1,al
-     ;3
-     permute_key p,2,s,0
-     mov al,temp_byte
-     mov f+2,al
-     ;4
-     permute_key p,3,s,0
-     mov al,temp_byte
-     mov f+3,al
+     mov f+si,al
+     inc si
+     loop agnf
      
      
      popa
@@ -1352,6 +1314,7 @@ start:
     ;INPUT
     call get_msgnkey
     
+    ;CALCULATIONS
     call arrange_k_plus
     call join_16_cd
     call generate_k
