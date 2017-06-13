@@ -143,15 +143,34 @@ data segment
     temp_offset2 dw 0000h
     temp_arr db 4 dup(0)
     lp db 4 dup(0)
-    rl db 8 dup(0)
+    rl db 8 dup(0) 
+    rp db 4 dup(0)
+    dec_msg db 8 dup(0)
     enc_msg db 8 dup(0)
     m_ascii db 19 dup(0)
     ekey_ascii db 19 dup(0)
     enc_msg_ascii 16 dup(0),"$"
-    error_msg db "You typed in some illigeal charecters, please insert hexadecimal number up to 16 charecter, not h nor zero before letters alowed. Press any key to try again...","$"
-    ask_msg db "Please enter the 16 charecters length hexa message: ","$"
-    ask_key db "Please enter the 16 charecters length hexa encryption key: ","$"
-    show_enc db "This is the encrypted message: ","$"
+    dec_msg_ascii db 16 dup(0),"$"
+    error_msg db "You typed in some invaild input, check help for list of command.",10,"Prees any key to start over...","$"
+    ask_msg db "Please enter the 16 charecters length hexa message:","$"
+    ask_enc db "Please enter the 16 charecters length hexa encrypted message:","$"
+    ask_key db "Please enter the 16 charecters length hexa encryption key:","$"
+    ask_dec_key db "Please enter the 16 charecters length hexa decryption key:","$"
+    show_enc db "This is the encrypted message:","$"
+    show_dec db "This is the encrypted message:","$"
+    ask_command db "What do you want to do?","$"
+    help_msg db "-help: show a list of commands.",10,10,"-enc: encrypt message using DES algorithm.",10,10,"-dec: decrypt message using DES algorithm.",10,10,"-exit: exits the program.",10,10,"*notice - all encrytion/decryption input has to be 16 charecters length hexadecimal number",10,"without extra zero in the start,or h at the end","$"
+    welcome_msg db "Hello, welcome to DES encryptor. If you don't know yet what to do, hit help to find out."
+    command db 4 dup(0),"$"
+    wait_key db "Press any key to continue..."
+    help db "help"
+    chelp db "HELP"
+    enc db "enc"
+    cenc db "ENC"
+    decr db "dec"
+    cdecr db "DEC"
+    exit db  "exit"
+    cexit db "EXIT"
         
     
     
@@ -168,6 +187,10 @@ code segment
 ;INPUT OUTPUT
 macro get_input dest,len
      pusha
+     ;new line
+     mov al,10
+     mov ah,1
+     int 10h
      mov dx,offset dest
      mov bx,dx
      mov cl,len
@@ -249,7 +272,7 @@ macro str2hex source,dest
      ; wait for any key....    
      mov ah, 1
      int 21h
-     call get_msgnkey
+     jmp ask_again
 
      end_str:
      popa
@@ -306,7 +329,24 @@ proc get_msgnkey
      str2hex ekey_ascii,ekey
      popa
      ret
-endp get_msgnkey
+endp get_msgnke
+proc get_encnkey
+     pusha
+     ;reset screen
+     call cln_scr
+     set_cur 0,0
+     print_msg ask_enc
+     get_input enc_msg_ascii,16
+     str2hex enc_msg_ascii,enc_msg
+     ;reset screen
+     call cln_scr
+     set_cur 0,0
+     print_msg ask_dec_key
+     get_input ekey_ascii,16
+     str2hex ekey_ascii,ekey
+     popa
+     ret
+endp get_encnkey
 
 macro hex2str source,dest
       pusha
@@ -355,6 +395,8 @@ macro hex2str source,dest
       loop again
       popa
 endm hex2str
+
+     
 
 ;END INPUT OUTPUT
 
@@ -963,6 +1005,25 @@ proc create_l
      ret
 endp create_l
 
+proc dec_r
+     pusha
+     ;create rp(previous r)
+     mov si,offset r
+     mov di,offset rp
+     mov cx,4
+     rep
+     movsb
+     ;copy old l to r
+     mov si,offset l
+     mov di,offset r
+     mov cx,4
+     rep
+     movsb
+     dec r_index
+     popa
+     ret
+endp dec_r
+
 proc create_r 
       pusha
       
@@ -1037,6 +1098,58 @@ proc create_r
       popa
       ret
 endp create_r
+
+proc dec_l
+     pusha
+     xor ax,ax
+     xor si,si
+     xor di,di
+     xor bx,bx
+     xor cx,cx
+     
+     ;f function decryption
+     ;generate b
+     mov cx,6
+     dec_b:
+     permute_key e_tbl,si,l,0
+     mov bl,temp_byte
+     mov e+si,bl
+     inc si
+     loop dec_b
+     
+      xor si,si
+      xor di,di
+      mov al,l_index
+      mov bl,6
+      mul bl
+      mov para,al
+
+      xor_multibytes e,k,6,0,para 
+       
+      call generate_8_b
+      call access_s_boxes
+      call arrange_f
+      
+      xor_multibytes f,rp,4,0,0
+      
+      xor si,si
+      xor cx,cx
+      xor ax,ax
+      mov cx,4
+      
+      cpy_f2l:
+      mov al,f+si
+      mov l+si,al
+      inc si
+      loop cpy_f2l
+      
+      dec l_index
+      popa
+      ret
+endp dec_l 
+     
+      
+     
 ;the macro do xor for to multibytes arrays
 ;it gets 2 vars, and return the xored data to the 1st var
 ;also it gets no of bytes in each array
@@ -1302,14 +1415,148 @@ proc join_rl
      loop agn_pr
      popa
      ret
-endp join_rl     
-     
+endp join_rl
+
+proc  join_dec_lr
+      pusha
+      xor di,di
+      xor cx,cx
+      xor ax,ax
+      xor si,si
+      mov cx,4
+      copy_l:
+      mov al,l+si
+      mov m+di,al
+      inc si
+      inc di
+      loop copy_l
+      
+      
+      xor cx,cx
+      xor ax,ax
+      xor si,si
+      mov cx,4
+      copy_r:
+      mov al,r+si
+      mov m+di,al
+      inc si
+      inc di
+      loop copy_r
+      popa
+      ret
+endp  join_dec_lr
+
+proc divide_enc_msg
+     pusha
+     xor cx,cx
+     xor si,si
+     xor di,di
+     xor ax,ax
+     mov cx,4
+     copy_right:
+     mov al,m+di
+     mov r+si,al
+     inc si
+     inc di
+     loop copy_right
+     xor si,si
+     mov cx,4
+     copy_left:
+     mov al,m+di
+     mov l+si,al
+     inc si
+     inc di
+     loop copy_left
+     popa
+     ret
+endp divide_enc_msg     
   
 start:
 ; set segment registers:
     mov ax, data
     mov ds, ax
     mov es, ax
+   
+   ;WELCOME
+   ;reset screen
+   call cln_scr
+   set_cur 0,0 
+   print_msg welcome_msg
+   jmp skip_reset
+   
+   ask_again:
+   ;zero command
+   mov cx,4
+   xor si,si
+   zcom:
+   mov command+si,0
+   inc si
+   loop zcom
+   ;new line
+   mov ax,10
+   int 10h
+   ;print wait for key
+   print_msg wait_key
+   ; wait for any key....    
+   mov ah, 1
+   int 21h
+   ;reset screen
+   call cln_scr
+   set_cur 0,0
+   skip_reset:
+   ;ask command
+   print_msg ask_command
+   get_input command,4
+   ;check command
+   mov cx,4
+   mov si,offset command
+   mov di,offset help
+   cmpsb 
+   jz goto_help
+   mov cx,4
+   mov si,offset command
+   mov di,offset chelp 
+   cmpsb
+   jz goto_help
+   mov cx,3
+   mov si,offset command
+   mov di,offset enc
+   cmpsb
+   jz encrypt
+   mov cx,3
+   mov si,offset command
+   mov di,offset cenc
+   cmpsb
+   jz encrypt
+   mov cx,3
+   mov si,offset command
+   mov di,offset decr
+   cmpsb
+   jz decrypt
+   mov cx,3
+   mov si,offset command
+   mov di,offset cdecr
+   cmpsb
+   jz decrypt
+   mov cx,4
+   mov si,offset command
+   mov di,offset exit
+   cmpsb
+   jz goto_exit
+   mov cx,4
+   mov si,offset command
+   mov di,offset cexit
+   cmpsb
+   jz goto_exit
+   jmp error2
+    
+    
+   
+   
+
+    
+    encrypt:
+    ;ENCRYPTION
     
     ;INPUT
     call get_msgnkey
@@ -1324,6 +1571,14 @@ start:
     crt_l_r:
     call create_l
     call create_r
+    print_bin l,4
+    mov ah,01
+    mov al,10
+    int 21h
+    print_bin r,4
+    int 21h
+    call cln_scr
+    set_cur 0,0    
     loop crt_l_r
     
     call join_rl
@@ -1335,6 +1590,86 @@ start:
     set_cur 0,0
     print_msg show_enc
     print_msg enc_msg_ascii
+    
+    jmp ask_again 
+    
+    
+    decrypt:
+    ;DECRYPTION
+    ;INPUT
+    call get_encnkey 
+    
+    ;CALCULATIONS
+    
+    mov cx,8
+    xor si,si
+    prmt:
+    permute_key ip_tbl,si,enc_msg,0,0 
+    mov al,temp_byte
+    mov m+si,al
+    inc si
+    loop prmt
+    call divide_enc_msg
+    call arrange_k_plus
+    call join_16_cd
+    call generate_k
+    
+    xor cx,cx
+    mov cx,16
+    mov r_index,0fh
+    mov l_index,0fh
+    dec_l_r:
+    call dec_r
+    call dec_l
+    loop dec_l_r
+    
+    call join_dec_lr
+    mov cx,8
+    xor si,si
+    prmt2:
+    permute_key pc_minus,si,m,0,0
+    mov al,temp_byte
+    mov dec_msg+si,al
+    inc si
+    loop prmt2
+    
+    ;OUTPUT
+    hex2str dec_msg,dec_msg_ascii
+    ;reset screen
+    call cln_scr
+    set_cur 0,0
+    print_msg show_dec
+    print_msg dec_msg_ascii
+    
+    jmp ask_again
+    
+    goto_help:
+    ;help
+    ;reset screen
+    call cln_scr
+    set_cur 0,0
+    print_msg help
+    jmp ask_again
+     
+     error2:
+     ;reset screen
+     call cln_scr
+     set_cur 0,0
+     print_msg error_msg
+     ; wait for any key....    
+     mov ah, 1
+     int 21h
+     jmp ask_again
+    
+    goto_exit:
+    ;exit
+    mov ah,4ch
+    xor al,al
+    int 21h
+    
+   
+     
+    
     
 
     mov ax, 4c00h ; exit to operating system.
