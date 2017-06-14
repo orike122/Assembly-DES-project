@@ -158,9 +158,9 @@ data segment
     ask_dec_key db "Please enter the 16 charecters length hexa decryption key:","$"
     show_enc db "This is the encrypted message:","$"
     show_dec db "This is the encrypted message:","$"
-    ask_command db "What do you want to do?","$"
-    help_msg db "-help: show a list of commands.",10,10,"-enc: encrypt message using DES algorithm.",10,10,"-dec: decrypt message using DES algorithm.",10,10,"-exit: exits the program.",10,10,"*notice - all encrytion/decryption input has to be 16 charecters length hexadecimal number",10,"without extra zero in the start,or h at the end","$"
-    welcome_msg db "Hello, welcome to DES encryptor. If you don't know yet what to do, hit help to find out."
+    ask_command db "Enter command:","$"
+    help_msg db "List of commands:",10,"e -  encrypt message using DES algorithm.",10,"d - decrypt message using DES algorithm.",10,10,"*notice - all encrytion/decryption input has to be 16 charecters length",10," hexadecimal number",10,"without extra zero in the start,or h at the end","$"
+    welcome_msg db "Hello, welcome to DES encryptor/decryptor."
     command db 4 dup(0),"$"
     wait_key db "Press any key to continue..."
     help db "help"
@@ -1477,83 +1477,41 @@ start:
     mov ds, ax
     mov es, ax
    
-   ;WELCOME
-   ;reset screen
-   call cln_scr
-   set_cur 0,0 
-   print_msg welcome_msg
-   jmp skip_reset
-   
-   ask_again:
-   ;zero command
-   mov cx,4
-   xor si,si
-   zcom:
-   mov command+si,0
-   inc si
-   loop zcom
-   ;new line
-   mov ax,10
-   int 10h
-   ;print wait for key
-   print_msg wait_key
-   ; wait for any key....    
-   mov ah, 1
-   int 21h
-   ;reset screen
-   call cln_scr
-   set_cur 0,0
-   skip_reset:
-   ;ask command
-   print_msg ask_command
-   get_input command,4
-   ;check command
-   mov cx,4
-   mov si,offset command
-   mov di,offset help
-   cmpsb 
-   jz goto_help
-   mov cx,4
-   mov si,offset command
-   mov di,offset chelp 
-   cmpsb
-   jz goto_help
-   mov cx,3
-   mov si,offset command
-   mov di,offset enc
-   cmpsb
-   jz encrypt
-   mov cx,3
-   mov si,offset command
-   mov di,offset cenc
-   cmpsb
-   jz encrypt
-   mov cx,3
-   mov si,offset command
-   mov di,offset decr
-   cmpsb
-   jz decrypt
-   mov cx,3
-   mov si,offset command
-   mov di,offset cdecr
-   cmpsb
-   jz decrypt
-   mov cx,4
-   mov si,offset command
-   mov di,offset exit
-   cmpsb
-   jz goto_exit
-   mov cx,4
-   mov si,offset command
-   mov di,offset cexit
-   cmpsb
-   jz goto_exit
-   jmp error2
+    print_msg welcome_msg
+    ;new line
+    mov dl,10
+    mov ah,2
+    int 21h
+    ;print help
+    print_msg help_msg
+    ;new line
+    mov dl,10
+    mov ah,2
+    int 21h
+    ask_again:
+    print_msg ask_command
+    ;new line
+    mov dl,10
+    mov ah,2
+    int 21h
+    ;get input
+    mov ah,1
+    int 21h
+    ;reset screen
+    call cln_scr
+    set_cur 0,0
+    ;check input
+    cmp al,'e'
+    jz encrypt
+    cmp al,'E'
+    jz encrypt
+    cmp al,"d"
+    jz decrypt
+    cmp al,"D"
+    jz decrypt
+    jmp error2
     
     
-   
-   
-
     
     encrypt:
     ;ENCRYPTION
@@ -1570,15 +1528,7 @@ start:
     mov cx,16
     crt_l_r:
     call create_l
-    call create_r
-    print_bin l,4
-    mov ah,01
-    mov al,10
-    int 21h
-    print_bin r,4
-    int 21h
-    call cln_scr
-    set_cur 0,0    
+    call create_r    
     loop crt_l_r
     
     call join_rl
@@ -1591,6 +1541,10 @@ start:
     print_msg show_enc
     print_msg enc_msg_ascii
     
+    ;new line
+    mov dl,10
+    mov ah,2
+    int 21h
     jmp ask_again 
     
     
@@ -1641,31 +1595,26 @@ start:
     print_msg show_dec
     print_msg dec_msg_ascii
     
+    ;new line
+    mov dl,10
+    mov ah,2
+    int 21h
     jmp ask_again
-    
-    goto_help:
-    ;help
+ 
+    error2:
     ;reset screen
     call cln_scr
     set_cur 0,0
-    print_msg help
-    jmp ask_again
-     
-     error2:
-     ;reset screen
-     call cln_scr
-     set_cur 0,0
-     print_msg error_msg
-     ; wait for any key....    
-     mov ah, 1
-     int 21h
-     jmp ask_again
-    
-    goto_exit:
-    ;exit
-    mov ah,4ch
-    xor al,al
+    print_msg error_msg
+    ; wait for any key....    
+    mov ah, 1
     int 21h
+    ;new line
+    mov dl,10
+    mov ah,2
+    int 21h
+    jmp ask_again
+    
     
    
      
