@@ -185,6 +185,9 @@ ends
 code segment
     
 ;INPUT OUTPUT
+;gets input
+;get:dest,length
+;return:string
 macro get_input dest,len
      pusha
      ;new line
@@ -200,7 +203,9 @@ macro get_input dest,len
      int 21h
      popa
 endm get_input
-
+;converts string to hexa
+;get:source,dest
+;return: hexa in dest
 macro str2hex source,dest
      pusha 
      LOCAL agn_bld_char,goback,error,check_hex,skp_hex,check_cap,skp_1st_char,end_str
@@ -277,7 +282,8 @@ macro str2hex source,dest
      end_str:
      popa
 endm str2hex
-
+;prints message
+;get:msg
 macro print_msg pmsg
       pusha
       mov ah,09h
@@ -287,7 +293,7 @@ macro print_msg pmsg
 
       popa
 endm print_msg
-
+;cleans screen
 proc cln_scr
      pusha
       ;clean screen
@@ -302,7 +308,8 @@ proc cln_scr
      popa
      ret
 endp cln_scr
-
+;sets cursor position
+;get:x,y
 macro set_cur x,y
       ;set cursor
       pusha
@@ -312,7 +319,7 @@ macro set_cur x,y
       int 10h
       popa
 endm set_cur x,y
-
+;gets message and key
 proc get_msgnkey
      pusha
      ;reset screen
@@ -329,7 +336,8 @@ proc get_msgnkey
      str2hex ekey_ascii,ekey
      popa
      ret
-endp get_msgnke
+endp get_msgnkey
+;gets encrypted message and key.
 proc get_encnkey
      pusha
      ;reset screen
@@ -347,7 +355,9 @@ proc get_encnkey
      popa
      ret
 endp get_encnkey
-
+;converts hexa to string
+;get:source,dest
+;return: string in dest
 macro hex2str source,dest
       pusha
       LOCAL again,cont,cont1,skp_hex,skp_hex1 
@@ -399,7 +409,8 @@ endm hex2str
      
 
 ;END INPUT OUTPUT
-
+;the macro gets double word var and number of left shift.
+;it returns the var left shifted.
 macro shift_left dword,shft_no
      pusha 
      xor ax,ax
@@ -435,22 +446,10 @@ macro shift_left dword,shft_no
      mov dword+2,dx
      popa
 endm shift_left
-          
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-;the proc rearrange the ekey according to the permution table pc-1, and then puts it in k_plus
-;use selected_byte to know the specific byte in the ekey, use selected bit to know the specific bit it the byte                                          
-;may use temp_byte as helper
+
+;the macro permutate var using permutation table
+;get:p table,byte index,adding parameter(if not used keep on zero)
+;return: temp_byte containing the permutated byte. 
 macro permute_key pc_table,byte_no,key,addpara
      
      pusha
@@ -650,7 +649,9 @@ macro permute_key pc_table,byte_no,key,addpara
             popa
            
 endm permute_key 
-
+;arranges k_plus and do left shifts
+;get: ekey
+;return:c,d  
 proc arrange_k_plus
      
      pusha
@@ -795,7 +796,9 @@ proc arrange_k_plus
      popa
      ret
 endp arrange_k_plus
-
+;join lefts part of k with right parts of k
+;get:c,d
+;return:cd
 proc join_16_cd
      pusha
      xor di,di
@@ -854,7 +857,9 @@ proc join_16_cd
      popa
      ret
 endp join_16_cd
-
+;the proc generates k using permutation with pc2
+;get:cd
+;return:k
 proc generate_k
      
      pusha
@@ -882,46 +887,9 @@ proc generate_k
      popa
      ret
 endp generate_k
-
-macro print_bin var,bytes_no
-      local again,again2,skip,endd
-      pusha
-      xor cx,cx
-      xor ax,ax
-      xor si,si 
-      mov cx,bytes_no
-      again:
-      mov al,var+si
-      push cx
-      mov cx,8
-      again2:
-      rcl al,1
-      jnc skip
-      push ax
-      mov ah,02h
-      mov dl,31h
-      int 21h
-      pop ax
-      jmp endd
-      skip:
-      push ax
-      mov ah,02h       
-      mov dl,30h
-      int 21h
-      pop ax
-      endd:
-      loop again2
-      inc si
-      push ax
-      mov ah,02h
-      mov dl,20h
-      int 21h
-      pop ax
-      pop cx
-      loop again
-      popa
-endm print_bin 
-
+;arranges ip using permutate m with ip_tbl, and arranges l_0 and r_0
+;get: m
+;return: l_0,r_0
 proc arrange_ip
      pusha
      xor cx,cx
@@ -957,7 +925,9 @@ proc arrange_ip
      popa
      ret
 endp arrange_ip
-
+;the proc creating next l using feistel
+;get: r_0/r
+;return:l,lp
 proc create_l
      pusha
      xor si,si;l index pointer(0 is 1, 1 is 2 and so on..)
@@ -1004,7 +974,9 @@ proc create_l
      popa
      ret
 endp create_l
-
+;the proc creating next r using feistel
+;get: l
+;return:r,rp
 proc dec_r
      pusha
      ;create rp(previous r)
@@ -1023,7 +995,9 @@ proc dec_r
      popa
      ret
 endp dec_r
-
+;creates r using feistel
+;get:l/l_0,k
+;return:r
 proc create_r 
       pusha
       
@@ -1098,7 +1072,9 @@ proc create_r
       popa
       ret
 endp create_r
-
+;creates r using feistel
+;get:r,k
+;return:l
 proc dec_l
      pusha
      xor ax,ax
@@ -1178,6 +1154,9 @@ macro xor_multibytes var1,var2,bytes_no,addpara1,addpara2
       loop again 
       popa
 endm xor_multibytes
+;the proc generates 8 groups of 6 bits b
+;get:e
+;return:b
 proc generate_8_b
      pusha
      xor si,si
@@ -1240,7 +1219,9 @@ proc generate_8_b
      popa
      ret
 endp generate_8_b
-
+;the proc replaces b with s-box data
+;get:b
+;return:s
 proc access_s_boxes
      pusha
      xor ax,ax
@@ -1359,7 +1340,9 @@ proc access_s_boxes
      popa
      ret
 endp access_s_boxes
-
+;the proc arranges and permutate f
+;get:s
+;return:f
 proc arrange_f
      pusha
      xor ax,ax
@@ -1379,7 +1362,9 @@ proc arrange_f
      popa
      ret
 endp arrange_f
-
+;the proc joins encrypted rl
+;get:r,l
+;return:rl
 proc join_rl
      pusha
      xor ax,ax
@@ -1416,7 +1401,9 @@ proc join_rl
      popa
      ret
 endp join_rl
-
+;the proc joins decrypted lr
+;get:l,r
+;return:lr
 proc  join_dec_lr
       pusha
       xor di,di
@@ -1445,7 +1432,9 @@ proc  join_dec_lr
       popa
       ret
 endp  join_dec_lr
-
+;the proc divide the encrypted msg
+;get:
+;return: r,l
 proc divide_enc_msg
      pusha
      xor cx,cx
@@ -1476,7 +1465,10 @@ start:
     mov ax, data
     mov ds, ax
     mov es, ax
-   
+    ;WELCOME:
+    ;reset screen
+    call cln_scr
+    set_cur 0,0
     print_msg welcome_msg
     ;new line
     mov dl,10
