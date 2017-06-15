@@ -190,10 +190,6 @@ code segment
 ;return:string
 macro get_input dest,len
      pusha
-     ;new line
-     mov al,10
-     mov ah,1
-     int 10h
      mov dx,offset dest
      mov bx,dx
      mov cl,len
@@ -1507,7 +1503,7 @@ start:
     
     encrypt:
     ;ENCRYPTION
-    
+
     ;INPUT
     call get_msgnkey
     
@@ -1516,6 +1512,9 @@ start:
     call join_16_cd
     call generate_k
     call arrange_ip
+    ;zero indexes
+    mov r_index,0
+    mov l_index,0
     xor cx,cx
     mov cx,16
     crt_l_r:
