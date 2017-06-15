@@ -160,9 +160,9 @@ data segment
     show_dec db "This is the encrypted message:","$"
     ask_command db "Enter command:","$"
     help_msg db "List of commands:",10,"e -  encrypt message using DES algorithm.",10,"d - decrypt message using DES algorithm.",10,10,"*notice - all encrytion/decryption input has to be 16 charecters length",10," hexadecimal number",10,"without extra zero in the start,or h at the end","$"
-    welcome_msg db "Hello, welcome to DES encryptor/decryptor."
-    command db 4 dup(0),"$"
-    wait_key db "Press any key to continue..."
+    welcome_msg db "Hello, welcome to DES encryptor/decryptor.","$"
+    command db 4 dup(0)
+    wait_key db "Press any key to continue...","$"
     help db "help"
     chelp db "HELP"
     enc db "enc"
@@ -1477,6 +1477,33 @@ start:
     mov ah,2
     int 21h
     ask_again:
+    ;zeromsg
+    xor si,si
+    mov cx,8
+    xoragn:
+    mov m+si,0
+    mov ekey+si,0
+    inc si
+    loop xoragn
+    ;zeromsg ascii
+    xor si,si
+    mov cx,16
+    xoragn2:
+    mov m_ascii+si,0
+    mov enc_msg_ascii+si,0
+    mov dec_msg_ascii+si,0
+    mov enc_msg+si,0
+    mov dec_msg,0
+    inc si
+    loop xoragn2
+    mov si,2
+    mov cx,16
+    xorkeyascii:
+    mov ekey_ascii+si,0
+    inc si
+    loop xorkeyascii
+    
+    
     print_msg ask_command
     ;new line
     mov dl,10
